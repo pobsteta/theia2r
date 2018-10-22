@@ -1,0 +1,90 @@
+title: "An R toolbox to find, download an preprocess Sentinel-2 data"
+template:
+  params:
+    bootswatch: yeti
+    ganalytics: UA-11080708-8
+reference:
+  - title: Automatic processing chain
+    desc: ~
+    contents:
+      - '`sen2r`'
+  - title: Find and download Sentinel-2 products
+    desc: ~
+    contents:
+      - '`s2_list`'
+      - '`s2_download`'
+      - '`sen2cor`'
+  - title: Read and convert SAFE format
+    desc: ~
+    contents:
+      - '`s2_translate`'
+      - '`s2_merge`'
+      - '`gdal_warp`'
+      - '`s2_mask`'
+      - '`s2_rgb`'
+      - '`s2_calcindices`'
+      - '`s2_thumbnails`'
+  - title: Manage file names and metadata
+    desc: ~
+    contents:
+      - '`safe_getMetadata`'
+      - '`safe_shortname`'
+      - '`sen2r_getElements`'
+      - '`s2_dop`'
+      - '`s2_tiles`'
+  - title: Install and configure dependencies
+    desc: ~
+    contents:
+      - '`check_sen2r_deps`'
+      - '`load_binpaths`'
+      - '`install_sen2cor`'
+      - '`install_wget`'
+      - '`install_aria2`'
+      - '`init_python`'
+  - title: Accessory functions
+    desc: ~
+    contents:
+      - '`s2_gui`'
+      - '`list_indices`'
+      - '`stack2rgb`'
+      - '`raster2rgb`'
+      - '`expand_path`'
+      - '`comsub`'
+      - '`projname`'
+      - '`abs2rel`'
+      - '`gdal_abs2rel`'
+      - '`mountpoint`'
+      - '`trace_function`'
+      - '`st_crs2`'
+      - '`normalize_path`'
+      - '`smooth_mask`'
+  - title: Internal functions
+    desc: (not exported)
+    contents:
+      - '`nn`'
+      - '`geograbber_process`'
+      - '`import_s2download`'
+      - '`print_message`'
+      - '`create_indices_db`'
+      - '`gdal_formats_db`'
+      - '`editModPoly`'
+      - '`read_scihub_login`'
+      - '`check_param_list`'
+      - '`s2_defNA`'
+      - '`compute_s2_paths`'
+      - '`maskapply_parallel`'
+      - '`load_extent_bbox`'
+      - '`get_spatype`'
+      - '`get_rastype`'
+      - '`get_vectype`'
+      - '`create_s2_dop`'
+navbar:
+  type: inverse
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "Function reference"
+      href: reference/index.html
+  right:
+    - icon: fa-github fa-lg
+      href: https://github.com/ranghetti/sen2r/

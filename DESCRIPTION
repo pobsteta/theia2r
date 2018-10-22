@@ -1,0 +1,56 @@
+Package: theia2r
+Type: Package
+Title: An R toolbox to find, download and preprocess Sentinel-2 data
+Version: 0.4.0
+Authors@R: c(person("Luigi", "Ranghetti", 
+                    email = "ranghetti.l@irea.cnr.it", 
+                    role = c("aut", "cre"), 
+                    comment = c(ORCID = "0000-0001-6207-5188")),
+             person("Lorenzo", "Busetto", 
+                    email = "lbusett@gmail.com", 
+                    role = c("aut"),
+                    comment = c(ORCID = "0000-0001-9634-6038")),
+             person("Pascal", "Obstetar",
+                    email = "pascal.obstetar@gmail.com",
+                    role = c("aut"))       
+             )
+Description: This package contains useful functions to preprocess Sentinel-2 imagery from theia.cnes.fr.
+  This package is under construction.
+License: GPL-3 + file LICENSE
+Encoding: UTF-8
+URL: https://pobsteta.github.io/theia2r, https://github.com/pobsteta/theia2r
+BugReports: https://github.com/pobsteta/theia2r/issues
+Imports:
+  reticulate,
+  methods,
+  digest,
+  stringr,
+  rgdal,
+  gdalUtils,
+  magrittr,
+  sp,
+  sf,
+  data.table,
+  raster,
+  XML,
+  jsonlite,
+  geojsonio,
+  leaflet,
+  leaflet.extras,
+  mapedit,
+  shiny,
+  shinyFiles,
+  shinydashboard,
+  shinyjs,
+  shinyWidgets,
+  foreach,
+  parallel,
+  doParallel,
+  units,
+  lwgeom
+Suggests:
+  knitr,
+  rmarkdown
+VignetteBuilder: knitr
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 6.1.0
