@@ -1,1 +1,1 @@
-name.surname@domain.country password
+email password

@@ -67,7 +67,7 @@ init_python <- function() {
   }
 
   # set the proper Python installation
-  use_python(binpaths$python, required = TRUE)
+  reticulate::use_python(binpaths$python, required = TRUE)
   
   # import python modules
   # in Windows they are imported with import_from_path(), which grants to
@@ -77,12 +77,12 @@ init_python <- function() {
   # pythonhome, so import() continued to try to import from pythonhome, i.e. 
   # osgeo from Anaconda python, which was missing).
   py <- list()
-  py$py <- import_builtins(convert=FALSE)
+  py$py <- reticulate::import_builtins(convert=FALSE)
   for (mod in py_modules) {
     py[[mod]] <- if (Sys.info()["sysname"] != "Windows") {
-      import(mod, convert=FALSE)
+      reticulate::import(mod, convert=FALSE)
     } else {
-      import_from_path(
+      reticulate::import_from_path(
         mod, 
         file.path(dirname(dirname(binpaths$python)), "apps/Python27/Lib/site-packages")
       )
@@ -93,7 +93,7 @@ init_python <- function() {
   # }
   
   # check for missing modules
-  py_missing <- py_modules[!sapply(py_modules,py_module_available)]
+  py_missing <- py_modules[!sapply(py_modules,reticulate::py_module_available)]
   if (length(py_missing)>0) {
     print_message(
       type="error",

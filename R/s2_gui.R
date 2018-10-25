@@ -1,6 +1,6 @@
-#' @title Launch the GUI for THEIA products
+#' @title Launch the GUI for Sentinel-2 products
 #' @description Launch the GUI to set parameters for the processing
-#'  chain of THEIA products.
+#'  chain of Sentinel-2 products.
 #' @param param_list List of parameters for initialising the GUI values
 #'  (if empty, default values are used).
 #' @param thunderforest_api Character value with the API for thinderforest
@@ -64,7 +64,7 @@ s2_gui <- function(param_list = NULL,
   
   # shiny
   s2_gui.ui <- dashboardPage(
-    title = "theia2r: an R toolbox to find, download and preprocess THEIA data",
+    title = "theia2r: an R toolbox to find, download and preprocess Sentinel-2 data",
     header = dashboardHeader(),
     sidebar = dashboardSidebar(
       
@@ -85,7 +85,7 @@ s2_gui <- function(param_list = NULL,
         menuItem("Spatio-temporal selection", tabName = "tab_query", icon = icon("clone"))
       ),
       conditionalPanel(
-        condition = "input.preprocess == 'TRUE'",
+        condition = "input.preprocess == 'safe2'",
         sidebarMenu(
           menuItem("Processing options", tabName = "tab_prepro", icon = icon("th"))
         ),
@@ -181,8 +181,8 @@ s2_gui <- function(param_list = NULL,
             "open_github_doc",
             label = "\u2000Open documentation",
             icon = icon("info-circle"),
-            onclick ="window.open('https://ranghetti.github.io/theia2r', '_blank')",
-            # onclick ="window.open('https://ranghetti.github.io/theia2r/articles/theia2r_gui.html', '_blank')",
+            onclick ="window.open('https://pobsteta.github.io/theia2r', '_blank')",
+            # onclick ="window.open('https://pobsteta.github.io/theia2r/articles/theia2r_gui.html', '_blank')",
             class = "darkbutton"
           )
         )
@@ -210,10 +210,11 @@ s2_gui <- function(param_list = NULL,
                     target="_blank"),
                   " (downloaded and/or corrected with sen2cor)"
                 ),
-                "Processed spatial files (surface reflectance, spectral indices, ...) in custom format"
+                "Processed spatial files (surface reflectance, spectral indices, ...) in custom format",
+                "THEIA products"
               ),
-              choiceValues = list(FALSE, TRUE),
-              selected=TRUE,
+              choiceValues = list("safe1", "safe2", "theia"),
+              selected="safe2",
               inline = FALSE
             )
           )),
@@ -221,12 +222,11 @@ s2_gui <- function(param_list = NULL,
           fluidRow(box(
             title="Select products and sensors",
             width=12,
-            
             fluidRow(
               column(
-                width=8,
+                width=3,
                 conditionalPanel(
-                  condition = "input.preprocess == 'TRUE'",
+                  condition = "input.preprocess == 'safe2' || input.preprocess == 'theia'",
                   checkboxGroupInput("list_prods",
                                      "Select products:",
                                      choiceNames = list("TOA (top-of-atmosphere) Reflectance",
@@ -238,7 +238,7 @@ s2_gui <- function(param_list = NULL,
                                      selected = c("BOA"))#,
                 ),
                 conditionalPanel(
-                  condition = "input.preprocess == 'FALSE'",
+                  condition = "input.preprocess == 'safe1'",
                   checkboxGroupInput("list_levels",
                                      "Select products:",
                                      choiceNames = list(span("Raw", a("level-1C", href="https://earth.esa.int/web/sentinel/user-guides/sentinel-2-msi/product-types/level-1c", target="_blank"), "SAFE files"),
@@ -249,63 +249,129 @@ s2_gui <- function(param_list = NULL,
               ),
               
               column(
-                width=4,
-                
+                width=3,
                 conditionalPanel(
-                  condition = "input.preprocess == 'TRUE'",
+                  condition = "input.preprocess == 'safe2'",
                   uiOutput("levels_message"),
-                  br()
-                ),
-                
-                checkboxGroupInput(
-                  "sel_sensor", "Select sensors:",
-                  choiceNames = list("Sentinel-2A", "Sentinel-2B"),
-                  choiceValues = list("s2a", "s2b"),
-                  selected = c("s2a","s2b"),
-                  inline = FALSE
+                  br(),
+                  checkboxGroupInput(
+                    "sel_sensor_safe", "SAFE Select sensors:",
+                    choiceNames = list("Sentinel-2A", "Sentinel-2B"),
+                    choiceValues = list("s2a", "s2b"),
+                    selected = c("s2a","s2b"),
+                    inline = FALSE
+                  )
                 )
-              ) # end of column for sensor selection
+              ), # end of column for sensor safe selection
               
+              column(
+                width=3,
+                conditionalPanel(
+                  condition = "input.preprocess == 'theia'",
+                  span(
+                    "Collections THEIA : ",
+                    a("description data THEIA",
+                      href="https://theia.cnes.fr/atdistrib/rocket/#/documents",
+                      target="_blank")
+                  ),
+                  br(),
+                  radioButtons(
+                    "sel_collection", "Select collections:",
+                    choiceNames = list("Landsat", "Snow", "Spot World Heritage", "Venus", "Sentinel"),
+                    choiceValues = list("lsat", "snow", "swh", "venus", "sen"),
+                    selected = c("sen"),
+                    inline = FALSE
+                  )
+                ) # end of collection choice
+              ), # end of column for sensor theia selection
+              column(
+                width=3,
+                conditionalPanel(
+                  condition = "input.preprocess == 'theia'",
+                  conditionalPanel(
+                    condition = "input.sel_collection == 'sen' & input.preprocess == 'theia'",
+                    checkboxGroupInput(
+                      "sel_sensor_theia", "THEIA Select SENTINEL sensors:",
+                      choiceNames = list("Sentinel-2A", "Sentinel-2B"),
+                      choiceValues = list("s2a", "s2b"),
+                      selected = c("s2a","s2b"),
+                      inline = FALSE
+                    )
+                  )
+                )
+              )
             )
           )),
           
           fluidRow(box(
-            title="SAFE options",
+            title="SAVING options",
             width=12,
             
             fluidRow(
-              # L1C directory
+              # L1C directory SAFE
               conditionalPanel(
-                condition = "output.req_l1c == 'TRUE'",
+                condition = "output.req_l1c_safe == 'TRUE' & input.preprocess != 'theia'",
                 column(
                   width=6,
                   div(style="display:inline-block;vertical-align:top;",
                       strong("Directory for level-1C SAFE products: \u00a0")),
                   div(style="display:inline-block;vertical-align:top;",
-                      htmlOutput("path_l1c_errormess")),
+                      htmlOutput("path_l1c_errormess_safe")),
                   div(div(style="display:inline-block;vertical-align:top;width:50pt;",
-                          shinyDirButton("path_l1c_sel", "Select", "Specify directory for level-1C SAFE products")),
+                          shinyDirButton("path_l1c_sel_safe", "Select", "Specify directory for level-1C SAFE products")),
                       div(style="display:inline-block;vertical-align:top;width:calc(100% - 50pt - 3px);",
-                          textInput("path_l1c_textin", NULL, "")))
+                          textInput("path_l1c_textin_safe", NULL, "")))
                 )
               ),
-              # L2A directory
+              # L2A directory SAFE
               conditionalPanel(
-                condition = "output.req_l2a == 'TRUE'",
+                condition = "output.req_l2a_safe == 'TRUE' & input.preprocess != 'theia'",
                 column(
                   width=6,
                   div(style="display:inline-block;vertical-align:top;",
                       strong("Directory for level-2A SAFE products: \u00a0")),
                   div(style="display:inline-block;vertical-align:top;",
-                      htmlOutput("path_l2a_errormess")),
+                      htmlOutput("path_l2a_errormess_safe")),
                   div(div(style="display:inline-block;vertical-align:top;width:50pt;",
-                          shinyDirButton("path_l2a_sel", "Select", "Specify directory for level-2A SAFE products")),
+                          shinyDirButton("path_l2a_sel_safe", "Select", "Specify directory for level-2A SAFE products")),
                       div(style="display:inline-block;vertical-align:top;width:calc(100% - 50pt - 3px);",
-                          textInput("path_l2a_textin", NULL, "")))
+                          textInput("path_l2a_textin_safe", NULL, "")))
                 )
               )
             ), # end of fluidrow for safe directories
             
+            fluidRow(
+              # L1C directory THEIA
+              conditionalPanel(
+                condition = "output.req_l1c_theia == 'TRUE' & input.preprocess == 'theia'",
+                column(
+                  width=6,
+                  div(style="display:inline-block;vertical-align:top;",
+                      strong("Directory for level-1C THEIA products: \u00a0")),
+                  div(style="display:inline-block;vertical-align:top;",
+                      htmlOutput("path_l1c_errormess_theia")),
+                  div(div(style="display:inline-block;vertical-align:top;width:50pt;",
+                          shinyDirButton("path_l1c_sel_theia", "Select", "Specify directory for level-1C THEIA products")),
+                      div(style="display:inline-block;vertical-align:top;width:calc(100% - 50pt - 3px);",
+                          textInput("path_l1c_textin_theia", NULL, "")))
+                )
+              ),
+              # L2A directory THEIA
+              conditionalPanel(
+                condition = "output.req_l2a_theia == 'TRUE' & input.preprocess == 'theia'",
+                column(
+                  width=6,
+                  div(style="display:inline-block;vertical-align:top;",
+                      strong("Directory for level-2A THEIA products: \u00a0")),
+                  div(style="display:inline-block;vertical-align:top;",
+                      htmlOutput("path_l2a_errormess_theia")),
+                  div(div(style="display:inline-block;vertical-align:top;width:50pt;",
+                          shinyDirButton("path_l2a_sel_theia", "Select", "Specify directory for level-2A THEIA products")),
+                      div(style="display:inline-block;vertical-align:top;width:calc(100% - 50pt - 3px);",
+                          textInput("path_l2a_textin_theia", NULL, "")))
+                )
+              )
+            ), # end of fluidrow for theia directories
             
             fluidRow(
               column(
@@ -335,14 +401,24 @@ s2_gui <- function(param_list = NULL,
                 # SciHub credentials
                 conditionalPanel(
                   condition = "input.online == 'TRUE'",
-                  div(
-                    style = "padding-bottom:10px;",
-                    actionButton(
-                      "scihub",
-                      label = "\u2000Login in SciHub",
-                      icon=icon("user-circle")
-                    )
-                  ),
+                    conditionalPanel(condition = "input.preprocess != 'theia'",
+                    div(
+                      style = "padding-bottom:10px;",
+                      actionButton(
+                        "scihub",
+                        label = "\u2000Login in SciHub",
+                        icon=icon("user-circle")
+                      )
+                    )),
+                    conditionalPanel(condition = "input.preprocess == 'theia'",
+                    div(
+                      style = "padding-bottom:10px;",
+                      actionButton(
+                        "theia",
+                        label = "\u2000Login in Theia",
+                        icon=icon("user-circle")
+                      )
+                    )),
                   radioButtons(
                     "downloader",
                     label = span(
@@ -374,7 +450,7 @@ s2_gui <- function(param_list = NULL,
                 ),
                 
                 # delete_safe
-                radioButtons("rm_safe", "Delete raw SAFE files after processing?",
+                radioButtons("rm_safe", "Delete raw files after processing?",
                              choices = list("Yes" = "all",
                                             "Only level-1C" = "l1c",
                                             "No" = "no"),
@@ -386,126 +462,8 @@ s2_gui <- function(param_list = NULL,
             
           )), # end of fluidRow/box "SAFE options"
           
-          fluidRow(box(
-            title="THEIA options",
-            width=12,
-            
-            # Collection data (landsat,SpotWorldHeritage,SENTINEL2,Snow,VENUS)
-            fluidRow(
-              # L1C directory
-              conditionalPanel(
-                condition = "output.req_l1c == 'TRUE'",
-                column(
-                  width=6,
-                  div(style="display:inline-block;vertical-align:top;",
-                      strong("Directory for level-1C THEIA products: \u00a0")),
-                  div(style="display:inline-block;vertical-align:top;",
-                      htmlOutput("path_l1c_errormess")),
-                  div(div(style="display:inline-block;vertical-align:top;width:50pt;",
-                          shinyDirButton("path_l1c_sel", "Select", "Specify directory for level-1C THEIA products")),
-                      div(style="display:inline-block;vertical-align:top;width:calc(100% - 50pt - 3px);",
-                          textInput("path_l1c_textin", NULL, "")))
-                )
-              ),
-              # L2A directory
-              conditionalPanel(
-                condition = "output.req_l2a == 'TRUE'",
-                column(
-                  width=6,
-                  div(style="display:inline-block;vertical-align:top;",
-                      strong("Directory for level-2A THEIA products: \u00a0")),
-                  div(style="display:inline-block;vertical-align:top;",
-                      htmlOutput("path_l2a_errormess")),
-                  div(div(style="display:inline-block;vertical-align:top;width:50pt;",
-                          shinyDirButton("path_l2a_sel", "Select", "Specify directory for level-2A SAFE products")),
-                      div(style="display:inline-block;vertical-align:top;width:calc(100% - 50pt - 3px);",
-                          textInput("path_l2a_textin", NULL, "")))
-                )
-              )
-            ), # end of fluidrow for THEIA SENTINEL directories
-            
-            
-            fluidRow(
-              column(
-                width=6,
-                
-                # online_mode (online/offline mode)
-                radioButtons(
-                  "online_theia",
-                  label = span(
-                    "Download mode\u2000",
-                    actionLink("help_online_theia", icon("question-circle")),
-                    if (Sys.info()["sysname"] == "Windows") {
-                      span(
-                        "\u2000",
-                        actionLink("fix_online", icon("warning"))
-                      )
-                    } else {
-                      
-                    }
-                  ),
-                  choiceNames = list("Online", "Offline"),
-                  choiceValues = list(TRUE, FALSE),
-                  selected = TRUE,
-                  inline = TRUE
-                ),
-                
-                # theia credentials
-                conditionalPanel(
-                  condition = "input.online_theia == 'TRUE'",
-                  div(
-                    style = "padding-bottom:10px;",
-                    actionButton(
-                      "theia",
-                      label = "\u2000Login in theia.cnes.fr",
-                      icon=icon("user-circle")
-                    )
-                  ),
-                  radioButtons(
-                    "downloader_theia",
-                    label = span(
-                      "Downloader\u2000",
-                      actionLink("help_downloader_theia", icon("question-circle"))
-                    ),
-                    choiceNames = list("Wget", "aria2"),
-                    choiceValues = list("wget", "aria2"),
-                    selected = "wget",
-                    inline = TRUE
-                  )
-                )
-                
-              ),
-              column(
-                width=6,
-                
-                # overwrite THEIA
-                radioButtons(
-                  "overwrite_theia",
-                  label = span(
-                    "Overwrite existing THEIA products?\u2000",
-                    actionLink("help_overwrite_theia", icon("question-circle"))
-                  ),
-                  choiceNames = list("Yes", "No"),
-                  choiceValues = list(TRUE, FALSE),
-                  selected = TRUE,
-                  inline = TRUE
-                ),
-                
-                # delete_theia
-                radioButtons("rm_theia", "Delete THEIA files after processing?",
-                             choices = list("Yes" = "all",
-                                            "Only level-1C" = "l1c",
-                                            "No" = "no"),
-                             selected = "no",
-                             inline = TRUE)
-                
-              )
-            ) # end of fluidRow download / delete THEIA
-            
-          )), # end of fluidRow/box "THEIA options"
-          
           conditionalPanel(
-            condition = "output.req_l2a == 'TRUE'",
+            condition = "output.req_l2a_safe == 'TRUE'",
             fluidRow(box(
               title="Atmospheric correction options",
               width=12,
@@ -898,7 +856,7 @@ s2_gui <- function(param_list = NULL,
             ),
             
             conditionalPanel(
-              condition = "output.req_l2a_onlytomask == 'TRUE'",
+              condition = "output.req_l2a_safe_onlytomask == 'TRUE'",
               span(style="color:grey",
                    p(stype="margin-bottom:15pt",
                      "SCL is required to mask products, so Level-2A SAFE ",
@@ -1137,7 +1095,7 @@ s2_gui <- function(param_list = NULL,
           title="Spectral indices",
           
           conditionalPanel(
-            condition = "input.preprocess == 'TRUE'",
+            condition = "input.preprocess == 'safe2'",
             
             fluidRow(
               box(
@@ -1222,7 +1180,7 @@ s2_gui <- function(param_list = NULL,
     # link to www directory and objects
     addResourcePath("www", system.file("www", package="theia2r"))
     output$img_logo<-renderUI(
-      img(src='www/images/logo_v2.png',height='133',width='200')
+      img(src='www/images/logo_v2.png',height='100',width='200')
     )
     
     extendedname <- link <- longname <- name <- providers <- s2_formula_mathml <- NULL
@@ -1276,17 +1234,45 @@ s2_gui <- function(param_list = NULL,
         safe_req$l2a_onlytomask <- FALSE
       }
     })
+    
+    # Reactive list of required THEIA levels
+    theia_req <- reactiveValues()
+    observe({
+      if (input$preprocess==TRUE) {
+        theia_req$l1c <- if (any(l1c_prods %in% input$list_prods) |
+                            !is.null(input$list_indices) & input$index_source=="TOA" |
+                            input$step_atmcorr %in% c("auto","theia")) {TRUE} else {FALSE}
+        theia_req$l2a <- if (any(l2a_prods %in% input$list_prods) |
+                            input$atm_mask == TRUE |
+                            !is.null(input$list_indices) & input$index_source=="BOA") {TRUE} else {FALSE}
+        theia_req$l2a_onlytomask <- if (!any(l2a_prods %in% input$list_prods) &
+                                       input$atm_mask == TRUE &
+                                       (is.null(input$list_indices) |
+                                        !is.null(input$list_indices) & input$index_source=="BOA")) {TRUE} else {FALSE}
+      } else {
+        theia_req$l1c <- if ("l1c" %in% input$list_levels | 
+                            input$step_atmcorr %in% c("auto","theia")) {TRUE} else {FALSE}
+        theia_req$l2a <- if ("l2a" %in% input$list_levels) {TRUE} else {FALSE}
+        theia_req$l2a_onlytomask <- FALSE
+      }
+    })
     # these output values are used for conditionalPanels:
-    output$req_l1c <- renderText(safe_req$l1c)
-    output$req_l2a <- renderText(safe_req$l2a)
-    output$req_l2a_onlytomask <- renderText(safe_req$l2a_onlytomask)
+    output$req_l1c_safe <- renderText(safe_req$l1c)
+    output$req_l2a_safe <- renderText(safe_req$l2a)
+    output$req_l1c_theia <- renderText(theia_req$l1c)
+    output$req_l2a_theia <- renderText(theia_req$l2a)
+    output$req_l2a_safe_onlytomask <- renderText(safe_req$l2a_onlytomask)
+    output$req_l2a_theia_onlytomask <- renderText(theia_req$l2a_onlytomask)
     # options to update these values also if not visible
-    outputOptions(output, "req_l1c", suspendWhenHidden = FALSE)
-    outputOptions(output, "req_l2a", suspendWhenHidden = FALSE)
-    outputOptions(output, "req_l2a_onlytomask", suspendWhenHidden = FALSE)
+    outputOptions(output, "req_l1c_safe", suspendWhenHidden = FALSE)
+    outputOptions(output, "req_l2a_safe", suspendWhenHidden = FALSE)
+    outputOptions(output, "req_l2a_safe_onlytomask", suspendWhenHidden = FALSE)
+    outputOptions(output, "req_l1c_theia", suspendWhenHidden = FALSE)
+    outputOptions(output, "req_l2a_theia", suspendWhenHidden = FALSE)
+    outputOptions(output, "req_l2a_theia_onlytomask", suspendWhenHidden = FALSE)
     
     
-    # Message for levels needed
+    # Message for levels needed SAFE
     output$levels_message <- renderUI({
       div(
         strong("SAFE levels needed:"),
@@ -1356,13 +1342,11 @@ s2_gui <- function(param_list = NULL,
     
     # Edit scihub credentials
     observeEvent(input$scihub, {
-      
       # open the modalDialog
       showModal(scihub_modal(
         username = if(!is.null(input$scihub_username)){input$scihub_username}else{NA},
         password = if(!is.null(input$scihub_password)){input$scihub_password}else{NA}
       ))
-      
       # dummy variable to define which save button has to be used
       output$switch_save_apihub <- renderText({
         if (is.null(input$apihub_default)) {
@@ -1374,7 +1358,6 @@ s2_gui <- function(param_list = NULL,
         }
       })
       outputOptions(output, "switch_save_apihub", suspendWhenHidden = FALSE)
-      
       # initialise the shinyFiles Save as button
       observe({
         apihub_path_prev <- rv$apihub_path
@@ -1395,14 +1378,60 @@ s2_gui <- function(param_list = NULL,
           }
         }
       })
-      
     })
-    
     # save user/password
     observeEvent(input$save_apihub, {
       write_scihub_login(
         input$scihub_username, input$scihub_password, 
         apihub_path = if(!is.na(rv$apihub_path)){as.character(rv$apihub_path)}else{NA}
+      )
+      removeModal()
+    })
+    
+    # Edit theia credentials
+    observeEvent(input$theia, {
+      # open the modalDialog
+      showModal(theia_modal(
+        username = if(!is.null(input$theia_username)){input$theia_username}else{NA},
+        password = if(!is.null(input$theia_password)){input$theia_password}else{NA}
+      ))
+      # dummy variable to define which save button has to be used
+      output$switch_save_apitheia <- renderText({
+        if (is.null(input$apitheia_default)) {
+          ""
+        } else if (input$apitheia_default) {
+          "default"
+        } else {
+          "custom"
+        }
+      })
+      outputOptions(output, "switch_save_apitheia", suspendWhenHidden = FALSE)
+      # initialise the shinyFiles Save as button
+      observe({
+        apitheia_path_prev <- rv$apitheia_path
+        shinyFileSave(input, "apitheia_path_sel", roots=volumes, session=session)
+        apitheia_path_raw <- parseSavePath(volumes, input$apitheia_path_sel)
+        rv$apitheia_path <- if (nrow(apitheia_path_raw)>0) {
+          as.character(apitheia_path_raw$datapath)
+        } else {
+          NA
+        }
+        if (!is.na(rv$apitheia_path)) {
+          if (!rv$apitheia_path %in% apitheia_path_prev) {
+            # if a change in the path is detected (= the button has been used),
+            # close the modalDialog
+            # FIXME if a user re-open the modalDialog and does not change
+            # user nor password, the "Save as..." button will not close the dialog
+            shinyjs::click("save_apitheia")
+          }
+        }
+      })
+    })
+    # save user/password
+    observeEvent(input$save_apitheia, {
+      write_theia_login(
+        input$theia_username, input$theia_password, 
+        apitheia_path = if(!is.na(rv$apitheia_path)){as.character(rv$apitheia_path)}else{NA}
       )
       removeModal()
     })
@@ -2183,63 +2212,10 @@ s2_gui <- function(param_list = NULL,
       }
     }
     
-    # THEIA products
-    shinyDirChoose(input, "path_l1c_theia_sel", roots = volumes)
-    shinyDirChoose(input, "path_l2a_theia_sel", roots = volumes)
-    shinyDirChoose(input, "path_tiles_theia_sel", roots = volumes)
-    shinyDirChoose(input, "path_merged_theia_sel", roots = volumes)
-    shinyDirChoose(input, "path_out_theia_sel", roots = volumes)
-    shinyDirChoose(input, "path_indices_theia_sel", roots = volumes)
-    
-    # if paths change after using the shinyDirButton, update the values and the textInput
-    observe({
-      path_l1c_theia_string <- parseDirPath(volumes, input$path_l1c_theia_sel)
-      updateTextInput(session, "path_l1c_theia_textin", value = path_l1c_theia_string)
-    })
-    observe({
-      path_l2a_theia_string <- parseDirPath(volumes, input$path_l2a_theia_sel)
-      updateTextInput(session, "path_l2a_theia_textin", value = path_l2a_theia_string)
-    })
-    observe({
-      path_tiles_theia_string <- parseDirPath(volumes, input$path_tiles_theia_sel)
-      updateTextInput(session, "path_tiles_theia_textin", value = path_tiles_theia_string)
-    })
-    observe({
-      path_merged_theia_string <- parseDirPath(volumes, input$path_merged_theia_sel)
-      updateTextInput(session, "path_merged_theia_textin", value = path_merged_theia_string)
-    })
-    observe({
-      path_out_theia_string <- parseDirPath(volumes, input$path_out_theia_sel)
-      updateTextInput(session, "path_out_theia_textin", value = path_out_theia_string)
-    })
-    observe({
-      path_indices_theia_string <- parseDirPath(volumes, input$path_indices_theia_sel)
-      updateTextInput(session, "path_indices_theia_textin", value = path_indices_theia_string)
-    })
-    
-    # if path changes after using the textInput, update the value
-    observe({
-      output$path_l1c_theia_errormess <- path_check(input$path_l1c_theia_textin)
-    })
-    observe({
-      output$path_l2a_theia_errormess <- path_check(input$path_l2a_theia_textin)
-    })
-    observe({
-      output$path_tiles_theia_errormess <- path_check(input$path_tiles_theia_textin)
-    })
-    observe({
-      output$path_merged_theia_errormess <- path_check(input$path_merged_theia_textin)
-    })
-    observe({
-      output$path_out_theia_errormess <- path_check(input$path_out_theia_textin)
-    })
-    observe({
-      output$path_indices_theia_errormess <- path_check(input$path_indices_theia_textin)
-    })
-    
-    # SAFE products
-    shinyDirChoose(input, "path_l1c_sel", roots = volumes)
-    shinyDirChoose(input, "path_l2a_sel", roots = volumes)
+    shinyDirChoose(input, "path_l1c_sel_safe", roots = volumes)
+    shinyDirChoose(input, "path_l2a_sel_safe", roots = volumes)
+    shinyDirChoose(input, "path_l1c_sel_theia", roots = volumes)
+    shinyDirChoose(input, "path_l2a_sel_theia", roots = volumes)
     shinyDirChoose(input, "path_tiles_sel", roots = volumes)
     shinyDirChoose(input, "path_merged_sel", roots = volumes)
     shinyDirChoose(input, "path_out_sel", roots = volumes)
@@ -2247,12 +2223,20 @@ s2_gui <- function(param_list = NULL,
     
     # if paths change after using the shinyDirButton, update the values and the textInput
     observe({
-      path_l1c_string <- parseDirPath(volumes, input$path_l1c_sel)
-      updateTextInput(session, "path_l1c_textin", value = path_l1c_string)
+      path_l1c_string_safe <- parseDirPath(volumes, input$path_l1c_sel_safe)
+      updateTextInput(session, "path_l1c_textin_safe", value = path_l1c_string_safe)
     })
     observe({
-      path_l2a_string <- parseDirPath(volumes, input$path_l2a_sel)
-      updateTextInput(session, "path_l2a_textin", value = path_l2a_string)
+      path_l2a_string_safe <- parseDirPath(volumes, input$path_l2a_sel_safe)
+      updateTextInput(session, "path_l2a_textin_safe", value = path_l2a_string_safe)
+    })
+    observe({
+      path_l1c_string_theia <- parseDirPath(volumes, input$path_l1c_sel_theia)
+      updateTextInput(session, "path_l1c_textin_theia", value = path_l1c_string_theia)
+    })
+    observe({
+      path_l2a_string_theia <- parseDirPath(volumes, input$path_l2a_sel_theia)
+      updateTextInput(session, "path_l2a_textin_theia", value = path_l2a_string_theia)
     })
     observe({
       path_tiles_string <- parseDirPath(volumes, input$path_tiles_sel)
@@ -2273,10 +2257,16 @@ s2_gui <- function(param_list = NULL,
     
     # if path changes after using the textInput, update the value
     observe({
-      output$path_l1c_errormess <- path_check(input$path_l1c_textin)
+      output$path_l1c_errormess_safe <- path_check(input$path_l1c_textin_safe)
     })
     observe({
-      output$path_l2a_errormess <- path_check(input$path_l2a_textin)
+      output$path_l2a_errormess_safe <- path_check(input$path_l2a_textin_safe)
+    })
+    observe({
+      output$path_l1c_errormess_theia <- path_check(input$path_l1c_textin_theia)
+    })
+    observe({
+      output$path_l2a_errormess_theia <- path_check(input$path_l2a_textin_theia)
     })
     observe({
       output$path_tiles_errormess <- path_check(input$path_tiles_textin)
@@ -2349,6 +2339,33 @@ s2_gui <- function(param_list = NULL,
       ))
     })
     
+    observeEvent(input$help_apitheia, {
+      showModal(modalDialog(
+        title = "Theia username and password",
+        p(HTML(
+          "For security reasons, the Theia username and password",
+          "are not saved with the other parameters."
+        )), 
+        p(HTML(
+          "By default, they are stored in a txt file inside the package,",
+          "so to be the same for all the theia2r executions",
+          "(the user have to set them only once)."
+        )),
+        p(HTML(
+          "Since it is not possible to perform more than two queries at",
+          "the same time, it can be useful to change them for a specific",
+          "theia2r run (i.e. for a scheduled execution), in order not to",
+          "interfer with other runs.",
+          "In this case, this option can be checked, and the user and password",
+          "will be saved in a different file, and will be used for this run",
+          "(the path of the text file - and not the content - is added inside",
+          "the parameter file)."
+        )),
+        easyClose = TRUE,
+        footer = NULL
+      ))
+    })
+    
     observeEvent(input$help_apihub, {
       showModal(modalDialog(
         title = "SciHub username and password",
@@ -2390,7 +2407,7 @@ s2_gui <- function(param_list = NULL,
     
     observeEvent(input$help_overwrite_safe, {
       showModal(modalDialog(
-        title = "Overwrite existing SAFE products?",
+        title = "Overwrite existing products?",
         p(HTML(
           "<strong>Yes</strong>:",
           "re-download all images matching the parameters set in",
@@ -2896,7 +2913,8 @@ s2_gui <- function(param_list = NULL,
       # processing steps #
       rl$preprocess <- as.logical(input$preprocess) # TRUE to perform preprocessing steps, FALSE to download SAFE only
       rl$s2_levels <- c(if(safe_req$l1c==TRUE){"l1c"}, if(safe_req$l2a==TRUE){"l2a"}) # required S2 levels ("l1c","l2a")
-      rl$sel_sensor <- input$sel_sensor # sensors to use ("s2a", "s2b")
+      rl$sel_sensor_safe <- input$sel_sensor_safe # sensors SAFE to use ("s2a", "s2b")
+      rl$sel_sensor_theia <- input$sel_sensor_theia # sensors THEIA to use ("s2a", "s2b")
       rl$online <- as.logical(input$online) # TRUE if online mode, FALSE if offline mode
       rl$downloader <- input$downloader # downloader ("wget" or "aria2")
       rl$overwrite_safe <- as.logical(input$overwrite_safe) # TRUE to overwrite existing SAFE, FALSE not to
@@ -3006,8 +3024,10 @@ s2_gui <- function(param_list = NULL,
       rl$overwrite <- as.logical(input$overwrite)
       
       # set directories #
-      rl$path_l1c <- if (safe_req$l1c==TRUE) {input$path_l1c_textin} else {NA} # path of L1C SAFE products
-      rl$path_l2a <- if (safe_req$l2a==TRUE) {input$path_l2a_textin} else {NA} # path of L2A SAFE products
+      rl$path_l1c_safe <- if (safe_req$l1c==TRUE) {input$path_l1c_textin_safe} else {NA} # path of L1C SAFE products
+      rl$path_l2a_safe <- if (safe_req$l2a==TRUE) {input$path_l2a_textin_safe} else {NA} # path of L2A SAFE products
+      rl$path_l1c_theia <- if (theia_req$l1c==TRUE) {input$path_l1c_textin_theia} else {NA} # path of L1C THEIA products
+      rl$path_l2a_theia <- if (theia_req$l2a==TRUE) {input$path_l2a_textin_theia} else {NA} # path of L2A THEIA products
       rl$path_tiles <- if (rl$preprocess==TRUE & input$keep_tiles==TRUE) {input$path_tiles_textin} else {NA} # path of entire tiled products
       rl$path_merged <- if (rl$preprocess==TRUE & input$keep_merged==TRUE) {input$path_merged_textin} else {NA} # path of entire tiled products
       rl$path_out <- if (rl$preprocess==TRUE & (length(input$list_prods)>1 | length(input$list_prods)>0 & !"indices" %in% input$list_prods)) {input$path_out_textin} else {NA} # path of output pre-processed products
@@ -3034,7 +3054,8 @@ s2_gui <- function(param_list = NULL,
         # processing steps
         updateRadioButtons(session, "preprocess", selected = pl$preprocess)
         updateCheckboxGroupInput(session, "list_levels", selected = pl$s2_levels)
-        updateCheckboxGroupInput(session, "sel_sensor", selected = pl$sel_sensor)
+        updateCheckboxGroupInput(session, "sel_sensor_safe", selected = pl$sel_sensor_safe)
+        updateCheckboxGroupInput(session, "sel_sensor_theia", selected = pl$sel_sensor_theia)
         updateRadioButtons(session, "online", selected = pl$online)
         updateRadioButtons(session, "downloader", selected = pl$downloader)
         updateRadioButtons(session, "overwrite_safe", selected = pl$overwrite_safe)
@@ -3093,8 +3114,10 @@ s2_gui <- function(param_list = NULL,
         
         
         # set directories
-        updateTextInput(session, "path_l1c_textin", value = pl$path_l1c)
-        updateTextInput(session, "path_l2a_textin", value = pl$path_l2a)
+        updateTextInput(session, "path_l1c_textin_safe", value = pl$path_l1c_safe)
+        updateTextInput(session, "path_l2a_textin_safe", value = pl$path_l2a_safe)
+        updateTextInput(session, "path_l1c_textin_theia", value = pl$path_l1c_theia)
+        updateTextInput(session, "path_l2a_textin_theia", value = pl$path_l2a_theia)
         updateTextInput(session, "path_tiles_textin", value = pl$path_tiles)
         updateTextInput(session, "path_merged_textin", value = pl$path_merged)
         updateTextInput(session, "path_out_textin", value = pl$path_out)

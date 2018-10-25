@@ -47,7 +47,7 @@ check_theia2r_deps <- function() {
       helpText(em(
         "GDAL is a mandatory dependency of the package:",
         "it is needed for all the processing operations",
-        "and to retrieve metadata from SAFE products"
+        "and to retrieve metadata from SAFE and THEIA products"
       )),
       span(style="display:inline-block;vertical-align:center;padding-top:5px;",
            actionButton("check_gdal", "Check GDAL", width=200),
