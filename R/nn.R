@@ -12,15 +12,10 @@
 #' basename(nn(NULL)) # ok
 #' }
 
-nn <- function(x) {if (is.null(x)) character(0) else x}
+nn <- function(x) {
+    if (is.null(x)) 
+        character(0) else x
+}
 
-# # Version which replaces also non-existing objects
-# nn <- function(x) {
-#   if (!exists(deparse(substitute(x)))) {
-#     character(0)
-#   } else if (is.null(x)) {
-#     character(0)
-#   } else {
-#     x
-#   }
-# }
+# # Version which replaces also non-existing objects nn <- function(x) { if (!exists(deparse(substitute(x)))) { character(0) } else if (is.null(x)) { character(0) }
+# else { x } }

@@ -22,24 +22,16 @@
 #'  (useful for logs or time consuming operations); default is FALSE.
 #' @param date_format Format of the date (see \code{\link[base]{strftime}})
 #'  for the definition of the format). The default format is
-#'  "\%Y-\%m-\%d \%H:\%M:\%S".
+#'  '\%Y-\%m-\%d \%H:\%M:\%S'.
 #' @return Message (in the defined format).
 #'
 #' @author Luigi Ranghetti, phD (2017) \email{ranghetti.l@@irea.cnr.it}
 #' @note License: GPL 3.0
 
-print_message <- function(..., type, sep="", date=FALSE, date_format="") {
-  message_string <- paste(if (date) {
-    paste0("[",strftime(Sys.time(), format=date_format),"]")
-  }, paste(c(...), collapse=sep))
-  switch(
-    type,
-    message = message(message_string),
-    string = message_string,
-    cat = cat(message_string,"\n",sep=""),
-    error = stop(message_string, call.=FALSE),
-    warning = warning(message_string, call.=FALSE),
-    waiting = invisible(readline(message_string)),
-    stop(paste0("Type '",type,"' not yet supported."))
-  )
+print_message <- function(..., type, sep = "", date = FALSE, date_format = "") {
+    message_string <- paste(if (date) {
+        paste0("[", strftime(Sys.time(), format = date_format), "]")
+    }, paste(c(...), collapse = sep))
+    switch(type, message = message(message_string), string = message_string, cat = cat(message_string, "\n", sep = ""), error = stop(message_string, call. = FALSE), 
+        warning = warning(message_string, call. = FALSE), waiting = invisible(readline(message_string)), stop(paste0("Type '", type, "' not yet supported.")))
 }

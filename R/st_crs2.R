@@ -19,37 +19,25 @@
 #' @author Luigi Ranghetti, phD (2018) \email{ranghetti.l@@irea.cnr.it}
 #' @note License: GPL 3.0
 #' @examples 
-#' st_crs2("+init=epsg:32609")
+#' st_crs2('+init=epsg:32609')
 #' st_crs2(32609)
 #' st_crs2(9)
-#' st_crs2("09")
-#' st_crs2("9N")
-#' st_crs2("09S")
+#' st_crs2('09')
+#' st_crs2('9N')
+#' st_crs2('09S')
 
 st_crs2 <- function(x, ...) {
-  
-  sel_crs <- if (grepl("^(([0-5]?[0-9])|60)[Nn]?$", x)) {
-    paste0(
-      "+init=epsg:326", 
-      str_pad(
-        gsub("^(([0-5]?[0-9])|60)[Nn]?$", "\\1", x),
-        2, "left", "0"
-      )
-    )
-  } else if (grepl("^(([0-5]?[0-9])|60)[Ss]$", x)) {
-    paste0(
-      "+init=epsg:327", 
-      str_pad(
-        gsub("^(([0-5]?[0-9])|60)[Ss]$", "\\1", x),
-        2, "left", "0"
-      )
-    )
-  } else if (grepl("^[0-9]+$", x)) {
-    as.integer(x)
-  } else {
-    x
-  }
-  
-  st_crs(x = sel_crs, ...)
-  
+    
+    sel_crs <- if (grepl("^(([0-5]?[0-9])|60)[Nn]?$", x)) {
+        paste0("+init=epsg:326", str_pad(gsub("^(([0-5]?[0-9])|60)[Nn]?$", "\\1", x), 2, "left", "0"))
+    } else if (grepl("^(([0-5]?[0-9])|60)[Ss]$", x)) {
+        paste0("+init=epsg:327", str_pad(gsub("^(([0-5]?[0-9])|60)[Ss]$", "\\1", x), 2, "left", "0"))
+    } else if (grepl("^[0-9]+$", x)) {
+        as.integer(x)
+    } else {
+        x
+    }
+    
+    st_crs(x = sel_crs, ...)
+    
 }

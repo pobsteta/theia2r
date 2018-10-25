@@ -456,7 +456,6 @@ s2_gui <- function(param_list = NULL,
                                             "No" = "no"),
                              selected = "no",
                              inline = TRUE)
-                
               )
             ) # end of fluidRow download / delete SAFE
             

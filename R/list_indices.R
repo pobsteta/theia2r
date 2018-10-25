@@ -23,29 +23,29 @@
 #' @author Luigi Ranghetti, phD (2017) \email{ranghetti.l@@irea.cnr.it}
 #' @note License: GPL 3.0
 #' @examples \dontrun{
-#' list_indices(c("name","longname"))
+#' list_indices(c('name','longname'))
 #' }
 
-list_indices <- function(values, pattern="") {
-  
-  # generate indices.json if missing
-  create_indices_db()
-  
-  # read indices database
-  json_path <- system.file("extdata","indices.json",package="theia2r")
-  indices <- jsonlite::fromJSON(json_path)
-  
-  # select requested values from the table
-  for (sel_par in c("a","b","x")) {
-    if (is.null(indices$indices[[sel_par]])) {
-      indices$indices[[sel_par]] <- as.numeric(NA)
+list_indices <- function(values, pattern = "") {
+    
+    # generate indices.json if missing
+    create_indices_db()
+    
+    # read indices database
+    json_path <- system.file("extdata", "indices.json", package = "theia2r")
+    indices <- jsonlite::fromJSON(json_path)
+    
+    # select requested values from the table
+    for (sel_par in c("a", "b", "x")) {
+        if (is.null(indices$indices[[sel_par]])) {
+            indices$indices[[sel_par]] <- as.numeric(NA)
+        }
     }
-  }
-  indices$indices <- indices$indices[grep(pattern,indices$indices$name),values]
-  attr(indices$indices, "pkg_version") <- package_version(indices$pkg_version)
-  attr(indices$indices, "creation_date") <- as.POSIXct(indices$creation_date)
-  
-  # return requested values
-  return(indices$indices)
-  
+    indices$indices <- indices$indices[grep(pattern, indices$indices$name), values]
+    attr(indices$indices, "pkg_version") <- package_version(indices$pkg_version)
+    attr(indices$indices, "creation_date") <- as.POSIXct(indices$creation_date)
+    
+    # return requested values
+    return(indices$indices)
+    
 }

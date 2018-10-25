@@ -23,61 +23,48 @@
 #' @importFrom rgdal gdalDrivers
 #' @importFrom utils packageVersion
 
-gdal_formats_db <- function(json_path = NA,
-                            force = FALSE) {
-  
-  # check if gdal_formats.json already exists, and if the version is updated
-  # we assume that a new version of gdal_formats.json is created at every new package update
-  if (is.na(json_path)) {
-    json_path <- file.path(system.file("extdata",package="theia2r"),"gdal_formats.json")
-  }
-  if (system.file("extdata","gdal_formats.json", package="theia2r") == json_path) {
-    json_version <- jsonlite::fromJSON(json_path)$pkg_version %>%
-      package_version()
-    if (force == FALSE & json_version >= packageVersion("theia2r")) {
-      return(invisible(NULL))
+gdal_formats_db <- function(json_path = NA, force = FALSE) {
+    
+    # check if gdal_formats.json already exists, and if the version is updated we assume that a new version of gdal_formats.json is created at every new package update
+    if (is.na(json_path)) {
+        json_path <- file.path(system.file("extdata", package = "theia2r"), "gdal_formats.json")
     }
-  }
-  
-  # load python modules
-  py <- init_python()
-  
-  # read GDAL drivers
-  gdal_driver_list <- list()
-  for (i in seq_len((py_to_r(gdal$GetDriverCount())-1))) {
-    gdal_driver_list[[i]] <- py$gdal$GetDriver(py$py$int(i))
-  }
-  
-  # export vectors of names and extensions
-  gdal_driver_ext <- sapply(
-    gdal_driver_list,
-    function(x) {
-      unlist(strsplit(paste0(py_to_r(x$GetMetadataItem(py$gdal$DMD_EXTENSIONS))," ")," "))[1]
+    if (system.file("extdata", "gdal_formats.json", package = "theia2r") == json_path) {
+        json_version <- jsonlite::fromJSON(json_path)$pkg_version %>% package_version()
+        if (force == FALSE & json_version >= packageVersion("theia2r")) {
+            return(invisible(NULL))
+        }
     }
-  )
-  gdal_driver_names <- sapply(
-    gdal_driver_list,
-    function(x) {
-      py_to_r(x$ShortName)
+    
+    # load python modules
+    py <- init_python()
+    
+    # read GDAL drivers
+    gdal_driver_list <- list()
+    for (i in seq_len((py_to_r(gdal$GetDriverCount()) - 1))) {
+        gdal_driver_list[[i]] <- py$gdal$GetDriver(py$py$int(i))
     }
-  )
-  gdal_driver_namext <- data.frame(
-    "name" = gdal_driver_names,
-    "ext" = gdal_driver_ext,
-    stringsAsFactors = FALSE
-  )
-  
-  # read other information using rgdal
-  gdal_drivers <- gdalDrivers()
-  
-  gdal_drivers <- merge(gdal_drivers, gdal_driver_namext, by="name", all.x=TRUE)
-  
-  # fix specific formats
-  gdal_drivers[gdal_drivers$name=="VRT","ext"] <- "vrt"
-  gdal_drivers[gdal_drivers$name=="ENVI","ext"] <- "dat"
-  
-  ## Convert in JSON
-  writeLines(jsonlite::toJSON(gdal_drivers, pretty=TRUE), json_path)
-  return(invisible(NULL))
-  
+    
+    # export vectors of names and extensions
+    gdal_driver_ext <- sapply(gdal_driver_list, function(x) {
+        unlist(strsplit(paste0(py_to_r(x$GetMetadataItem(py$gdal$DMD_EXTENSIONS)), " "), " "))[1]
+    })
+    gdal_driver_names <- sapply(gdal_driver_list, function(x) {
+        py_to_r(x$ShortName)
+    })
+    gdal_driver_namext <- data.frame(name = gdal_driver_names, ext = gdal_driver_ext, stringsAsFactors = FALSE)
+    
+    # read other information using rgdal
+    gdal_drivers <- gdalDrivers()
+    
+    gdal_drivers <- merge(gdal_drivers, gdal_driver_namext, by = "name", all.x = TRUE)
+    
+    # fix specific formats
+    gdal_drivers[gdal_drivers$name == "VRT", "ext"] <- "vrt"
+    gdal_drivers[gdal_drivers$name == "ENVI", "ext"] <- "dat"
+    
+    ## Convert in JSON
+    writeLines(jsonlite::toJSON(gdal_drivers, pretty = TRUE), json_path)
+    return(invisible(NULL))
+    
 }

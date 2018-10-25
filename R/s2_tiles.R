@@ -10,23 +10,20 @@
 #' s2tiles <- s2_tiles()
 #' 
 #' \dontrun{
-#' s2tiles_it <- s2tiles[grep("^3[23]T", s2tiles$tile_id),]
+#' s2tiles_it <- s2tiles[grep('^3[23]T', s2tiles$tile_id),]
 #' mapview::mapview(s2tiles_it)}
 
 s2_tiles <- function() {
-  
-  # extract and import tiles kml
-  s2tiles_kmz <- system.file("extdata","vector","s2_tiles.kmz",package="theia2r")
-  s2tiles_kml <- gsub("\\.kmz$",".kml",s2tiles_kmz)
-  if (!file.exists(s2tiles_kml)) {
-    unzip(zipfile = s2tiles_kmz,
-          files   = basename(s2tiles_kml),
-          exdir   = dirname(s2tiles_kml),
-          unzip   = "internal")
-  }
-  s2tiles <- st_read(s2tiles_kml, stringsAsFactors=FALSE, quiet=TRUE)
-  s2tiles[,!names(s2tiles)%in%c("Name","geometry")] <- NULL
-  names(s2tiles) <- gsub("^Name$","tile_id",names(s2tiles))
-  s2tiles
-  
+    
+    # extract and import tiles kml
+    s2tiles_kmz <- system.file("extdata", "vector", "s2_tiles.kmz", package = "theia2r")
+    s2tiles_kml <- gsub("\\.kmz$", ".kml", s2tiles_kmz)
+    if (!file.exists(s2tiles_kml)) {
+        unzip(zipfile = s2tiles_kmz, files = basename(s2tiles_kml), exdir = dirname(s2tiles_kml), unzip = "internal")
+    }
+    s2tiles <- st_read(s2tiles_kml, stringsAsFactors = FALSE, quiet = TRUE)
+    s2tiles[, !names(s2tiles) %in% c("Name", "geometry")] <- NULL
+    names(s2tiles) <- gsub("^Name$", "tile_id", names(s2tiles))
+    s2tiles
+    
 }

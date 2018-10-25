@@ -21,26 +21,23 @@
 #' @rdname scihub_login
 #' @export
 
-read_scihub_login <- function(apihub_path=NA) {
-  
-  # if apihub_path is not specified, 
-  # retrieve from the current s2download installation
-  if (is.na(apihub_path)) {
-    # import s2download
-    s2download <- import_s2download(convert=FALSE)
-    apihub_path <- file.path(py_to_r(s2download$inst_path),"apihub.txt")
-  }
-  
-  # return user and password
-  if (file.exists(apihub_path)) {
-    readLines(apihub_path)[1] %>%
-      strsplit(" ") %>%
-      unlist()
-  } else {
-    # if apihub does not exists, return default credentials
-    c("user","user")
-  }
-  
+read_scihub_login <- function(apihub_path = NA) {
+    
+    # if apihub_path is not specified, retrieve from the current s2download installation
+    if (is.na(apihub_path)) {
+        # import s2download
+        s2download <- import_s2download(convert = FALSE)
+        apihub_path <- file.path(py_to_r(s2download$inst_path), "apihub.txt")
+    }
+    
+    # return user and password
+    if (file.exists(apihub_path)) {
+        readLines(apihub_path)[1] %>% strsplit(" ") %>% unlist()
+    } else {
+        # if apihub does not exists, return default credentials
+        c("user", "user")
+    }
+    
 }
 
 
@@ -48,75 +45,37 @@ read_scihub_login <- function(apihub_path=NA) {
 #' @rdname scihub_login
 #' @export
 
-write_scihub_login <- function(username, password, apihub_path=NA) {
-  
-  # if apihub_path is not specified, 
-  # retrieve from the current s2download installation
-  if (is.na(apihub_path)) {
-    # import s2download
-    s2download <- import_s2download(convert=FALSE)
-    apihub_path <- file.path(py_to_r(s2download$inst_path),"apihub.txt")
-  }
-  
-  # write credentials
-  writeLines(
-    paste(username, password),
-    apihub_path
-  )
-  
+write_scihub_login <- function(username, password, apihub_path = NA) {
+    
+    # if apihub_path is not specified, retrieve from the current s2download installation
+    if (is.na(apihub_path)) {
+        # import s2download
+        s2download <- import_s2download(convert = FALSE)
+        apihub_path <- file.path(py_to_r(s2download$inst_path), "apihub.txt")
+    }
+    
+    # write credentials
+    writeLines(paste(username, password), apihub_path)
+    
 }
 
 #' @name scihub_modal
 #' @rdname scihub_login
 
 # write dialog content
-scihub_modal <- function(username=NA, password=NA) {
-  # read scihub user/password
-  if (anyNA(c(username,password))) {
-    apihub <- read_scihub_login()
-    username <- apihub[1]
-    password <- apihub[2]
-  }
-  modalDialog(
-    title = "Set SciHub username and password",
-    size = "s",
-    textInput("scihub_username", "Username", username),
-    passwordInput("scihub_password", "Password", password),
-    a("Register new account", href="https://scihub.copernicus.eu/dhus/#/self-registration", target="_blank"),
-    "\u2000\u2014\u2000",
-    a("Forgot password?", href="https://scihub.copernicus.eu/dhus/#/forgot-password", target="_blank"),
-    checkboxInput(
-      "apihub_default",
-      label = span(
-        "Store inside the package\u2000",
-        actionLink("help_apihub", icon("question-circle"))
-      ),
-      value = TRUE
-    ),
-    easyClose = FALSE,
-    footer = tagList(
-      div(style="display:inline-block;vertical-align:top;",
-          conditionalPanel(
-            condition = "output.switch_save_apihub == 'custom'",
-            shinySaveButton(
-              "apihub_path_sel", 
-              "Save as...", "Specify path for apihub text file", 
-              filetype=list(plain="txt"), 
-              class = "scihub_savebutton"
-            )
-          )),
-      div(style="display:inline-block;vertical-align:top;",
-          conditionalPanel(
-            condition = "output.switch_save_apihub == 'default'",
-            actionButton(
-              "save_apihub", "\u2000Save", 
-              icon=icon("save"), 
-              class = "scihub_savebutton"
-            )
-          )),
-      div(style="display:inline-block;vertical-align:top;",
-          modalButton("\u2000Cancel", icon = icon("ban")))
-    )
-  )
+scihub_modal <- function(username = NA, password = NA) {
+    # read scihub user/password
+    if (anyNA(c(username, password))) {
+        apihub <- read_scihub_login()
+        username <- apihub[1]
+        password <- apihub[2]
+    }
+    modalDialog(title = "Set SciHub username and password", size = "s", textInput("scihub_username", "Username", username), passwordInput("scihub_password", "Password", 
+        password), a("Register new account", href = "https://scihub.copernicus.eu/dhus/#/self-registration", target = "_blank"), " — ", a("Forgot password?", href = "https://scihub.copernicus.eu/dhus/#/forgot-password", 
+        target = "_blank"), checkboxInput("apihub_default", label = span("Store inside the package ", actionLink("help_apihub", icon("question-circle"))), value = TRUE), 
+        easyClose = FALSE, footer = tagList(div(style = "display:inline-block;vertical-align:top;", conditionalPanel(condition = "output.switch_save_apihub == 'custom'", 
+            shinySaveButton("apihub_path_sel", "Save as...", "Specify path for apihub text file", filetype = list(plain = "txt"), class = "scihub_savebutton"))), div(style = "display:inline-block;vertical-align:top;", 
+            conditionalPanel(condition = "output.switch_save_apihub == 'default'", actionButton("save_apihub", " Save", icon = icon("save"), class = "scihub_savebutton"))), 
+            div(style = "display:inline-block;vertical-align:top;", modalButton(" Cancel", icon = icon("ban")))))
 }
 

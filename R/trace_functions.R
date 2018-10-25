@@ -35,144 +35,128 @@
 #' @return NULL
 #' @author Luigi Ranghetti, phD (2017) \email{ranghetti.l@@irea.cnr.it}
 #' @note License: GPL 3.0
-#' @importFrom magrittr "%>%"
+#' @importFrom magrittr '%>%'
 #' @importFrom methods is
 
 #' @name start_trace
 #' @rdname trace_function
 start_trace <- function(trace_files, trace_funname) {
-  
-  # path in which trace txt files are placed
-  trace_path <- file.path(system.file(package="theia2r"),"logs") 
-  dir.create(trace_path, showWarnings = FALSE) 
-  
-  # define name of the tracelog
-  tracename <- file.path(
-    trace_path,
-    paste0(
-      strftime(Sys.time(), "%y%m%d%H%M%S"), "_",
-      trace_funname, ".txt"
-    )
-  )
-  
-  # write tracename with the paths of the expected files
-  writeLines(trace_files, tracename)
-  # return its path
-  tracename
-  
+    
+    # path in which trace txt files are placed
+    trace_path <- file.path(system.file(package = "theia2r"), "logs")
+    dir.create(trace_path, showWarnings = FALSE)
+    
+    # define name of the tracelog
+    tracename <- file.path(trace_path, paste0(strftime(Sys.time(), "%y%m%d%H%M%S"), "_", trace_funname, ".txt"))
+    
+    # write tracename with the paths of the expected files
+    writeLines(trace_files, tracename)
+    # return its path
+    tracename
+    
 }
 
 
 #' @name end_trace
 #' @rdname trace_function
 end_trace <- function(tracename) {
-  if (file.exists(tracename)) {unlink(tracename)}
+    if (file.exists(tracename)) {
+        unlink(tracename)
+    }
 }
 
 
 #' @name clean_trace
 #' @rdname trace_function
 clean_trace <- function(tracename) {
-  
-  # do nothing if tracename does not exist
-  if (!file.exists(tracename)) {return(invisible(NULL))}
-  
-  # retrieve when the trace started
-  tracetime <- gsub("^([0-9]+)\\_.*\\.txt$","\\1",basename(tracename)) %>%
-    as.POSIXct(format="%y%m%d%H%M%S")
-  # read expected output filenames
-  outfilenames <- readLines(tracename)
-  
-  # delete files if they were created after tracetime
-  for (outfilename in outfilenames) {
-    if (file.exists(outfilename)) {
-      outfiletime <- file.mtime(outfilename)
-      if (outfiletime > tracetime) {
-        unlink(outfilename, recursive=TRUE)
-      }
+    
+    # do nothing if tracename does not exist
+    if (!file.exists(tracename)) {
+        return(invisible(NULL))
     }
-  }
-  
-  # delete trace file
-  unlink(tracename)
-  
+    
+    # retrieve when the trace started
+    tracetime <- gsub("^([0-9]+)\\_.*\\.txt$", "\\1", basename(tracename)) %>% as.POSIXct(format = "%y%m%d%H%M%S")
+    # read expected output filenames
+    outfilenames <- readLines(tracename)
+    
+    # delete files if they were created after tracetime
+    for (outfilename in outfilenames) {
+        if (file.exists(outfilename)) {
+            outfiletime <- file.mtime(outfilename)
+            if (outfiletime > tracetime) {
+                unlink(outfilename, recursive = TRUE)
+            }
+        }
+    }
+    
+    # delete trace file
+    unlink(tracename)
+    
 }
 
 
 #' @name trace_function
 #' @rdname trace_function
 #' @export
-trace_function <- function(trace_fun, trace_files, trace_funname=NA, ...) {
-  
-  # Start tracing
-  if (is.na(trace_funname)) {
-    trace_funname <- deparse(substitute(trace_fun))
-  }
-  tracename <- start_trace(trace_files, trace_funname)
-  
-  # run function
-  fun_out <- tryCatch(
-    trace_fun(...),
-    error = print
-  )
-  
-  # in case of errors, clean the ouput and return an error;
-  # otherwise, end the trace and return the output
-  if (is(fun_out, "error")) {
-    clean_trace(tracename)
-    stop(fun_out)
-  } else {
-    end_trace(tracename)
-    return(fun_out)
-  }
-  
+trace_function <- function(trace_fun, trace_files, trace_funname = NA, ...) {
+    
+    # Start tracing
+    if (is.na(trace_funname)) {
+        trace_funname <- deparse(substitute(trace_fun))
+    }
+    tracename <- start_trace(trace_files, trace_funname)
+    
+    # run function
+    fun_out <- tryCatch(trace_fun(...), error = print)
+    
+    # in case of errors, clean the ouput and return an error; otherwise, end the trace and return the output
+    if (is(fun_out, "error")) {
+        clean_trace(tracename)
+        stop(fun_out)
+    } else {
+        end_trace(tracename)
+        return(fun_out)
+    }
+    
 }
 
 
 #' @name clean_traces
 #' @rdname trace_function
 #' @export
-clean_traces <- function(trace_funname=NA) {
-  
-  # import the content of the path in which trace txt files are placed
-  trace_path <- system.file("logs",package="theia2r")
-  tracenames_df <- data.frame(
-    "name" = list.files(trace_path, "^([0-9]+)\\_(.*)\\.txt$", full.names = TRUE),
-    stringsAsFactors = FALSE
-  )
-  tracenames_df$time <- gsub("^([0-9]+)\\_(.*)\\.txt$","\\1",basename(tracenames_df$name)) %>%
-    as.POSIXct(format="%y%m%d%H%M%S")
-  tracenames_df$fun <- gsub("^([0-9]+)\\_(.*)\\.txt$","\\2",basename(tracenames_df$name))
-  # if required, filter on trace_funname
-  if (!is.na(trace_funname)) {
-    tracenames_df <- tracenames_df[tracenames_df$fun==trace_funname,]
-  }
-  # if empty, exit
-  if (nrow(tracenames_df)==0) {return(invisible(NULL))}
-  
-  # read the names of the single files
-  outfilenames <- lapply(tracenames_df$name, readLines)
-  outfiles_df <- data.frame(
-    "name" = unlist(outfilenames),
-    "tracename" = rep(tracenames_df$name, sapply(outfilenames, length)),
-    stringsAsFactors = FALSE
-  )
-  outfiles_df$time <- file.mtime(outfiles_df$name)
-  outfiles_df$tracetime <- tracenames_df[
-    match(outfiles_df$tracename, tracenames_df$name),
-    "time"
-    ]
-  
-  # delete files if they were created after each tracetime
-  for (i in seq_len(nrow(outfiles_df))) {
-    if (file.exists(outfiles_df[i,"name"])) {
-      if (outfiles_df[i,"time"] > outfiles_df[i,"tracetime"]) {
-        unlink(outfiles_df[i,"name"], recursive=TRUE)
-      }
+clean_traces <- function(trace_funname = NA) {
+    
+    # import the content of the path in which trace txt files are placed
+    trace_path <- system.file("logs", package = "theia2r")
+    tracenames_df <- data.frame(name = list.files(trace_path, "^([0-9]+)\\_(.*)\\.txt$", full.names = TRUE), stringsAsFactors = FALSE)
+    tracenames_df$time <- gsub("^([0-9]+)\\_(.*)\\.txt$", "\\1", basename(tracenames_df$name)) %>% as.POSIXct(format = "%y%m%d%H%M%S")
+    tracenames_df$fun <- gsub("^([0-9]+)\\_(.*)\\.txt$", "\\2", basename(tracenames_df$name))
+    # if required, filter on trace_funname
+    if (!is.na(trace_funname)) {
+        tracenames_df <- tracenames_df[tracenames_df$fun == trace_funname, ]
     }
-  }
-  
-  # delete trace files
-  unlink(tracenames_df$name)
-  
+    # if empty, exit
+    if (nrow(tracenames_df) == 0) {
+        return(invisible(NULL))
+    }
+    
+    # read the names of the single files
+    outfilenames <- lapply(tracenames_df$name, readLines)
+    outfiles_df <- data.frame(name = unlist(outfilenames), tracename = rep(tracenames_df$name, sapply(outfilenames, length)), stringsAsFactors = FALSE)
+    outfiles_df$time <- file.mtime(outfiles_df$name)
+    outfiles_df$tracetime <- tracenames_df[match(outfiles_df$tracename, tracenames_df$name), "time"]
+    
+    # delete files if they were created after each tracetime
+    for (i in seq_len(nrow(outfiles_df))) {
+        if (file.exists(outfiles_df[i, "name"])) {
+            if (outfiles_df[i, "time"] > outfiles_df[i, "tracetime"]) {
+                unlink(outfiles_df[i, "name"], recursive = TRUE)
+            }
+        }
+    }
+    
+    # delete trace files
+    unlink(tracenames_df$name)
+    
 }

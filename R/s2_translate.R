@@ -23,7 +23,7 @@
 #'  bands are included within them).
 #' @param prod_type (optional) Vector of types to be produced as outputs
 #'  (see [safe_shortname] for the list of accepted values). Default is
-#'  reflectance ("TOA" for level 1C, "BOA" for level 2A).
+#'  reflectance ('TOA' for level 1C, 'BOA' for level 2A).
 #' @param tiles (optional) Character vector with the desired output tile IDs 
 #'  (id specified IDs are not present in the input SAFE product, they are not
 #'  produced). Default (NA) is to process all the found tiles.
@@ -32,13 +32,13 @@
 #'  resolution will be rescaled to `res`. Band 08 is used with `res = '10m'`,
 #'  band 08A with `res = '20m'` and `res = '60m'`.
 #' @param format (optional) Format of the output file (in a
-#'  format recognised by GDAL). Default value is "VRT" (Virtual Raster).
+#'  format recognised by GDAL). Default value is 'VRT' (Virtual Raster).
 #' @param compress (optional) In the case a GTiff format is
 #'  chosen, the compression indicated with this parameter is used.
 #' @param vrt_rel_paths (optional) Logical: if TRUE (default on Linux), 
 #'  the paths present in the VRT output file are relative to the VRT position;
 #'  if FALSE (default on Windows), they are absolute. 
-#'  This takes effect only with `format = "VRT"`.
+#'  This takes effect only with `format = 'VRT'`.
 #' @param utmzone (optional) UTM zone of output products (default:
 #'  the first one retrieved from input granules). Note that this function
 #'  does not perform reprojections: if no granules refer to the specified
@@ -53,258 +53,222 @@
 #' @export
 #' @examples \dontrun{
 #' s2_l1c_example <- file.path(
-#'   "/existing/path",
-#'   "S2A_MSIL1C_20170603T101031_N0205_R022_T32TQQ_20170603T101026.SAFE")
+#'   '/existing/path',
+#'   'S2A_MSIL1C_20170603T101031_N0205_R022_T32TQQ_20170603T101026.SAFE')
 #' s2_l1c_example <- file.path(
-#'   "/existing/path",
-#'   "S2A_MSIL2A_20170603T101031_N0205_R022_T32TQQ_20170603T101026.SAFE")
+#'   '/existing/path',
+#'   'S2A_MSIL2A_20170603T101031_N0205_R022_T32TQQ_20170603T101026.SAFE')
 #'
 #' # Create a single TOA GeoTIFF in the same directory
-#' s2_translate(s2_l1c_example, format="GTiff")
+#' s2_translate(s2_l1c_example, format='GTiff')
 #'
 #' # Create a single BOA VRT with a custom name
-#' s2_translate(s2_l2a_example, "/new/path/example_sentinel2_sr.vrt",
+#' s2_translate(s2_l2a_example, '/new/path/example_sentinel2_sr.vrt',
 #'   vrt_rel_paths=TRUE)
 #'
 #' # Create three products (ENVI) in the same directory at 60m resolution
-#' s2_translate(s2_example, format="ENVI", prod_type=c("BOA","TCI","SCL"),
-#'   res="60m", subdirs=TRUE)
+#' s2_translate(s2_example, format='ENVI', prod_type=c('BOA','TCI','SCL'),
+#'   res='60m', subdirs=TRUE)
 #'}
 
-s2_translate <- function(infile,
-                         outdir=".",
-                         subdirs=NA,
-                         tmpdir=NA,
-                         rmtmp=TRUE,
-                         prod_type=NULL,
-                         tiles=NA,
-                         res="10m",
-                         format="VRT",
-                         compress="DEFLATE",
-                         vrt_rel_paths=NA,
-                         utmzone="",
-                         overwrite = FALSE) {
-  
-  # Define vrt_rel_paths
-  if (is.na(vrt_rel_paths)) {
-    vrt_rel_paths <- Sys.info()["sysname"] != "Windows"
-  }
-  
-  # Load GDAL paths
-  binpaths <- load_binpaths("gdal")
-  
-  # check res (and use the resolutions >= specified res)
-  if (!res %in% c("10m","20m","60m")) {
-    print_message(
-      type="error",
-      "\"res\" value is not recognised (accepted values are '10m', '20m' ",
-      "and '60m').")
-  }
-  if (res == "10m") {
-    res <- c("10m","20m","60m")
-  } else if (res == "20m") {
-    res <- c("20m","60m")
-  }
-  
-  # Check "tiles" argument
-  if (is.null(tiles)) {tiles <- NA}
-  if (anyNA(tiles)) {tiles <- NA} else if (all(tiles=="")) {tiles <- NA}
-  
-  # check output format
-  gdal_formats <- fromJSON(system.file("extdata","gdal_formats.json",package="theia2r"))
-  sel_driver <- gdal_formats[gdal_formats$name==format,]
-  if (nrow(sel_driver)==0) {
-    print_message(
-      type="error",
-      "Format \"",format,"\" is not recognised; ",
-      "please use one of the formats supported by your GDAL installation.\n\n",
-      "To list them, use the following command:\n",
-      "gdalUtils::gdalinfo(formats=TRUE)\n\n",
-      "To search for a specific format, use:\n",
-      "gdalinfo(formats=TRUE)[grep(\"yourformat\", gdalinfo(formats=TRUE))]")
-  }
-  
-  # Check GDAL installation
-  check_gdal(abort=TRUE)
-  # Retrieve xml required metadata
-  infile_meta <- safe_getMetadata(infile, c("xml_main","xml_granules","utm","level","tiles", "jp2list"))
-  infile_dir = dirname(infile_meta$xml_main)
-  
-  # define output directory
-  suppressWarnings(outdir <- expand_path(outdir, parent=dirname(infile_dir), silent=TRUE))
-  dir.create(outdir, recursive=FALSE, showWarnings=FALSE)
-  # create subdirs
-  if (is.na(subdirs)) {
-    subdirs <- ifelse(length(prod_type)>1, TRUE, FALSE)
-  }
-  if (subdirs) {
-    sapply(file.path(outdir,prod_type), dir.create, showWarnings=FALSE)
-  }
-  
-  # check compression value
-  if (format=="GTiff") {
-    if (!compress %in% c("JPEG","LZW","PACKBITS","DEFLATE","CCITTRLE",
-                         "CCITTFAX3","CCITTFAX4","LZMA","NONE")) {
-      print_message(type="warning",
-                    "'",toupper(compress),"' is not a valid compression value; ",
-                    "the default 'DEFLATE' value will be used.")
-      compress <- "DEFLATE"
-    }
-  }
-  
-  # retrieve UTM zone
-  if (utmzone=="") {
-    print_message(
-      type="message",
-      "Using UTM zone ",sel_utmzone <- infile_meta$utm[1],".")
-  } else {
-    sel_utmzone <- which(infile_meta$utm== as.integer(utmzone))
-    if (length(sel_utmzone)==0) {
-      print_message(
-        type="warning",
-        "Tiles with UTM zone ",utmzone," are not present: zone ",
-        sel_utmzone <- infile_meta$utm[1]," will be used.")
-    }
-  }
-  
-  # select default product type if missing
-  if (is.null(prod_type)) {
-    if (infile_meta$level=="1C") {
-      prod_type <- "TOA"
-    } else if (infile_meta$level=="2A") {
-      prod_type <- "BOA"
-    }
-  }
-  
-  # define output extension
-  out_ext <- sel_driver[1,"ext"]
-  
-  # create a file / set of files for each prod_type
-  out_names <- character(0) # names of created files
-  for (sel_prod in prod_type) {try({
+s2_translate <- function(infile, outdir = ".", subdirs = NA, tmpdir = NA, rmtmp = TRUE, prod_type = NULL, tiles = NA, res = "10m", format = "VRT", compress = "DEFLATE", 
+    vrt_rel_paths = NA, utmzone = "", overwrite = FALSE) {
     
-    if (sel_prod %in% c("BOA","TOA")) {
-      sel_type <- "MSI"
-    } else {
-      sel_type <- sel_prod
+    # Define vrt_rel_paths
+    if (is.na(vrt_rel_paths)) {
+        vrt_rel_paths <- Sys.info()["sysname"] != "Windows"
     }
     
-    # define NA flag
-    sel_na <- switch(sel_prod,
-                     BOA = "65535",
-                     TOA = "65535",
-                     SCL = "0",
-                     TCI = NA,
-                     NA)
-    # define output subdir
-    out_subdir <- ifelse(subdirs, file.path(outdir,sel_prod), outdir)
+    # Load GDAL paths
+    binpaths <- load_binpaths("gdal")
     
-    # TODO check that required bands are present
+    # check res (and use the resolutions >= specified res)
+    if (!res %in% c("10m", "20m", "60m")) {
+        print_message(type = "error", "\"res\" value is not recognised (accepted values are '10m', '20m' ", "and '60m').")
+    }
+    if (res == "10m") {
+        res <- c("10m", "20m", "60m")
+    } else if (res == "20m") {
+        res <- c("20m", "60m")
+    }
     
-    # define and create tmpdir
-    if (is.na(tmpdir)) {
-      tmpdir <- if (format == "VRT") {
-        rmtmp <- FALSE # force not to remove intermediate files
-        if (!missing(outdir)) {
-          file.path(outdir, ".vrt")
-        } else {
-          tempfile(pattern="s2translate_")
+    # Check 'tiles' argument
+    if (is.null(tiles)) {
+        tiles <- NA
+    }
+    if (anyNA(tiles)) {
+        tiles <- NA
+    } else if (all(tiles == "")) {
+        tiles <- NA
+    }
+    
+    # check output format
+    gdal_formats <- fromJSON(system.file("extdata", "gdal_formats.json", package = "theia2r"))
+    sel_driver <- gdal_formats[gdal_formats$name == format, ]
+    if (nrow(sel_driver) == 0) {
+        print_message(type = "error", "Format \"", format, "\" is not recognised; ", "please use one of the formats supported by your GDAL installation.\n\n", "To list them, use the following command:\n", 
+            "gdalUtils::gdalinfo(formats=TRUE)\n\n", "To search for a specific format, use:\n", "gdalinfo(formats=TRUE)[grep(\"yourformat\", gdalinfo(formats=TRUE))]")
+    }
+    
+    # Check GDAL installation
+    check_gdal(abort = TRUE)
+    # Retrieve xml required metadata
+    infile_meta <- safe_getMetadata(infile, c("xml_main", "xml_granules", "utm", "level", "tiles", "jp2list"))
+    infile_dir = dirname(infile_meta$xml_main)
+    
+    # define output directory
+    suppressWarnings(outdir <- expand_path(outdir, parent = dirname(infile_dir), silent = TRUE))
+    dir.create(outdir, recursive = FALSE, showWarnings = FALSE)
+    # create subdirs
+    if (is.na(subdirs)) {
+        subdirs <- ifelse(length(prod_type) > 1, TRUE, FALSE)
+    }
+    if (subdirs) {
+        sapply(file.path(outdir, prod_type), dir.create, showWarnings = FALSE)
+    }
+    
+    # check compression value
+    if (format == "GTiff") {
+        if (!compress %in% c("JPEG", "LZW", "PACKBITS", "DEFLATE", "CCITTRLE", "CCITTFAX3", "CCITTFAX4", "LZMA", "NONE")) {
+            print_message(type = "warning", "'", toupper(compress), "' is not a valid compression value; ", "the default 'DEFLATE' value will be used.")
+            compress <- "DEFLATE"
         }
-      } else {
-        tempfile(pattern="s2translate_")
-      }
     }
-    dir.create(tmpdir, recursive=FALSE, showWarnings=FALSE)
     
-    # cycle on granules (with compact names, this runs only once; with old name, one or more)
-    for (sel_granule in infile_meta$xml_granules) {try({
-      
-      sel_tile <- safe_getMetadata(dirname(sel_granule), "nameinfo")$id_tile
-      
-      # continue only if sel_tile is within desired tiles
-      if (anyNA(tiles) | sel_tile %in% tiles) {
-        
-        # define output basename
-        out_prefix <- safe_shortname(sel_granule, prod_type=sel_prod, res=res[1], full.name=FALSE, abort=TRUE)
-        # complete output filename
-        out_name <- file.path(out_subdir,paste0(out_prefix,".",out_ext))
-        
-        # if out_name already exists and overwrite==FALSE, do not proceed
-        if (!file.exists(out_name) | overwrite==TRUE) {
-          
-          # select required bands from the list and order them by resolution
-          jp2df_selbands <- infile_meta$jp2list[infile_meta$jp2list$type==sel_type &
-                                                  infile_meta$jp2list$tile==sel_tile,]
-          jp2df_selbands <- jp2df_selbands[with(jp2df_selbands,order(band,res)),]
-          # remove lower resolutions and keep only the best resolution for each band
-          if (!any(jp2df_selbands$res=="")) {
-            jp2df_selbands <- jp2df_selbands[as.integer(substr(jp2df_selbands$res,1,2))>=as.integer(substr(res[1],1,2)),]
-          } else {
-            # for oldname L1C (which do not have "res" in granule name) remove B08 or B8A basing on the requested "res"
-            if (as.integer(substr(res[1],1,2)) < 20) {
-              jp2df_selbands <- jp2df_selbands[-grep("B8A.jp2$",jp2df_selbands$layer),]
+    # retrieve UTM zone
+    if (utmzone == "") {
+        print_message(type = "message", "Using UTM zone ", sel_utmzone <- infile_meta$utm[1], ".")
+    } else {
+        sel_utmzone <- which(infile_meta$utm == as.integer(utmzone))
+        if (length(sel_utmzone) == 0) {
+            print_message(type = "warning", "Tiles with UTM zone ", utmzone, " are not present: zone ", sel_utmzone <- infile_meta$utm[1], " will be used.")
+        }
+    }
+    
+    # select default product type if missing
+    if (is.null(prod_type)) {
+        if (infile_meta$level == "1C") {
+            prod_type <- "TOA"
+        } else if (infile_meta$level == "2A") {
+            prod_type <- "BOA"
+        }
+    }
+    
+    # define output extension
+    out_ext <- sel_driver[1, "ext"]
+    
+    # create a file / set of files for each prod_type
+    out_names <- character(0)  # names of created files
+    for (sel_prod in prod_type) {
+        try({
+            
+            if (sel_prod %in% c("BOA", "TOA")) {
+                sel_type <- "MSI"
             } else {
-              jp2df_selbands <- jp2df_selbands[-grep("B08.jp2$",jp2df_selbands$layer),]
+                sel_type <- sel_prod
             }
-          }
-          jp2df_selbands <- jp2df_selbands[!duplicated(with(jp2df_selbands,paste(band,tile))),]
-          # extract vector of paths
-          jp2_selbands <- file.path(infile_dir,jp2df_selbands[,"relpath"])
-          
-          # create final vrt with all the bands (of select final raster with a single band)
-          if (length(jp2_selbands)>1) {
-            final_vrt_name <- ifelse(format=="VRT", out_name, paste0(tmpdir,"/",out_prefix,".vrt"))
-            system(
-              paste0(
-                binpaths$gdalbuildvrt," -separate ",
-                "-resolution highest ",
-                "\"",final_vrt_name,"\" ",
-                paste(paste0("\"",jp2_selbands,"\""), collapse=" ")
-              ),
-              intern = Sys.info()["sysname"] == "Windows"
-            )
-            if (vrt_rel_paths==TRUE) {
-              gdal_abs2rel(final_vrt_name)
+            
+            # define NA flag
+            sel_na <- switch(sel_prod, BOA = "65535", TOA = "65535", SCL = "0", TCI = NA, NA)
+            # define output subdir
+            out_subdir <- ifelse(subdirs, file.path(outdir, sel_prod), outdir)
+            
+            # TODO check that required bands are present
+            
+            # define and create tmpdir
+            if (is.na(tmpdir)) {
+                tmpdir <- if (format == "VRT") {
+                  rmtmp <- FALSE  # force not to remove intermediate files
+                  if (!missing(outdir)) {
+                    file.path(outdir, ".vrt")
+                  } else {
+                    tempfile(pattern = "s2translate_")
+                  }
+                } else {
+                  tempfile(pattern = "s2translate_")
+                }
             }
-          } else {
-            final_vrt_name <- jp2_selbands
-          }
-          
-          # create output file (or copy vrt file)
-          if (format != "VRT" | length(jp2_selbands)==1) {
-            system(
-              paste0(
-                binpaths$gdal_translate," -of ",format," ",
-                if (format=="GTiff") {paste0("-co COMPRESS=",toupper(compress)," ")},
-                if (!is.na(sel_na)) {paste0("-a_nodata ",sel_na," ")},
-                "\"",final_vrt_name,"\" ",
-                "\"",out_name,"\""
-              ), intern = Sys.info()["sysname"] == "Windows"
-            )
-            if (format == "VRT" & vrt_rel_paths==TRUE) {
-              gdal_abs2rel(out_name)
-            }
-          }
-          
-        } # end of "overwite" IF cycle
-        
-        out_names <- c(out_names, out_name)
-        
-      } # end of "sel_tile %in% tiles" IF cycle
-      
-    })} # end of sel_granule cycle
+            dir.create(tmpdir, recursive = FALSE, showWarnings = FALSE)
+            
+            # cycle on granules (with compact names, this runs only once; with old name, one or more)
+            for (sel_granule in infile_meta$xml_granules) {
+                try({
+                  
+                  sel_tile <- safe_getMetadata(dirname(sel_granule), "nameinfo")$id_tile
+                  
+                  # continue only if sel_tile is within desired tiles
+                  if (anyNA(tiles) | sel_tile %in% tiles) 
+                    {
+                      
+                      # define output basename
+                      out_prefix <- safe_shortname(sel_granule, prod_type = sel_prod, res = res[1], full.name = FALSE, abort = TRUE)
+                      # complete output filename
+                      out_name <- file.path(out_subdir, paste0(out_prefix, ".", out_ext))
+                      
+                      # if out_name already exists and overwrite==FALSE, do not proceed
+                      if (!file.exists(out_name) | overwrite == TRUE) 
+                        {
+                          
+                          # select required bands from the list and order them by resolution
+                          jp2df_selbands <- infile_meta$jp2list[infile_meta$jp2list$type == sel_type & infile_meta$jp2list$tile == sel_tile, ]
+                          jp2df_selbands <- jp2df_selbands[with(jp2df_selbands, order(band, res)), ]
+                          # remove lower resolutions and keep only the best resolution for each band
+                          if (!any(jp2df_selbands$res == "")) {
+                            jp2df_selbands <- jp2df_selbands[as.integer(substr(jp2df_selbands$res, 1, 2)) >= as.integer(substr(res[1], 1, 2)), ]
+                          } else {
+                            # for oldname L1C (which do not have 'res' in granule name) remove B08 or B8A basing on the requested 'res'
+                            if (as.integer(substr(res[1], 1, 2)) < 20) {
+                              jp2df_selbands <- jp2df_selbands[-grep("B8A.jp2$", jp2df_selbands$layer), ]
+                            } else {
+                              jp2df_selbands <- jp2df_selbands[-grep("B08.jp2$", jp2df_selbands$layer), ]
+                            }
+                          }
+                          jp2df_selbands <- jp2df_selbands[!duplicated(with(jp2df_selbands, paste(band, tile))), ]
+                          # extract vector of paths
+                          jp2_selbands <- file.path(infile_dir, jp2df_selbands[, "relpath"])
+                          
+                          # create final vrt with all the bands (of select final raster with a single band)
+                          if (length(jp2_selbands) > 1) {
+                            final_vrt_name <- ifelse(format == "VRT", out_name, paste0(tmpdir, "/", out_prefix, ".vrt"))
+                            system(paste0(binpaths$gdalbuildvrt, " -separate ", "-resolution highest ", "\"", final_vrt_name, "\" ", paste(paste0("\"", jp2_selbands, 
+                              "\""), collapse = " ")), intern = Sys.info()["sysname"] == "Windows")
+                            if (vrt_rel_paths == TRUE) {
+                              gdal_abs2rel(final_vrt_name)
+                            }
+                          } else {
+                            final_vrt_name <- jp2_selbands
+                          }
+                          
+                          # create output file (or copy vrt file)
+                          if (format != "VRT" | length(jp2_selbands) == 1) {
+                            system(paste0(binpaths$gdal_translate, " -of ", format, " ", if (format == "GTiff") {
+                              paste0("-co COMPRESS=", toupper(compress), " ")
+                            }, if (!is.na(sel_na)) {
+                              paste0("-a_nodata ", sel_na, " ")
+                            }, "\"", final_vrt_name, "\" ", "\"", out_name, "\""), intern = Sys.info()["sysname"] == "Windows")
+                            if (format == "VRT" & vrt_rel_paths == TRUE) {
+                              gdal_abs2rel(out_name)
+                            }
+                          }
+                          
+                        }  # end of 'overwite' IF cycle
+                      
+                      out_names <- c(out_names, out_name)
+                      
+                    }  # end of 'sel_tile %in% tiles' IF cycle
+                  
+                })
+            }  # end of sel_granule cycle
+            
+        })
+    }  # end of prod_type cycle
     
-  })} # end of prod_type cycle
-  
-  # Remove temporary files
-  if (rmtmp == TRUE) {
-    unlink(tmpdir, recursive=TRUE)
-  }
-  
-  print_message(
-    type="message",
-    length(out_names)," output files were correctly created."
-  )
-  return(out_names)
-  
+    # Remove temporary files
+    if (rmtmp == TRUE) {
+        unlink(tmpdir, recursive = TRUE)
+    }
+    
+    print_message(type = "message", length(out_names), " output files were correctly created.")
+    return(out_names)
+    
 }

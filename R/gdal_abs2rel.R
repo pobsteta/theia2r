@@ -13,46 +13,44 @@
 #' @author Luigi Ranghetti, phD (2017) \email{ranghetti.l@@irea.cnr.it}
 #' @note License: GPL 3.0
 #' @export
-#' @importFrom magrittr "%>%"
+#' @importFrom magrittr '%>%'
 #' @name gdal_abs2rel
 #' @rdname gdal_abs2rel_rel2abs
 #' @examples
 #' \dontrun{
-#' example_vrt <- "/TODO/example/s2_translate.vrt"
-#' rel_vrt <- "/TODO/example/s2_translate_rel.vrt"
-#' abs_vrt <- "/TODO/example/s2_translate_abs.vrt"
+#' example_vrt <- '/TODO/example/s2_translate.vrt'
+#' rel_vrt <- '/TODO/example/s2_translate_rel.vrt'
+#' abs_vrt <- '/TODO/example/s2_translate_abs.vrt'
 #' gdal_abs2rel(example_vrt, rel_vrt)
 #' gdal_rel2abs(example_vrt, abs_vrt)
 #' }
-gdal_abs2rel <- function(in_vrt, out_vrt=NA) {
-  
-  # to avoid NOTE on check
-  . <- NULL
-  
-  if (is.na(out_vrt)) {
-    out_vrt <- in_vrt
-  }
-  
-  if (!file.exists(in_vrt)) {
-    print_message(type="error", "Input file (\"",in_vrt,"\") does not exists.")
-  }
-  
-  vrt_text <- readLines(in_vrt)
-  
-  # path_regex <- "^ *<SourceFilename relativeToVRT=\"0\">(.*)</SourceFilename> *$"
-  path_regex <- "^.* relativeToVRT=\"0\">(.*)</.*"
-  
-  for (sel_line in grep(path_regex, vrt_text)) {
-    abs_path <- gsub(path_regex, "\\1", vrt_text[sel_line])
-    rel_path <- suppressWarnings(abs2rel(abs_path, dirname(in_vrt)))
-    if (abs_path != rel_path) {
-      vrt_text[sel_line] <- vrt_text[sel_line] %>%
-        gsub(abs_path, rel_path, ., fixed=TRUE) %>%
-        gsub("relativeToVRT=\"0\"", "relativeToVRT=\"1\"", ., fixed=TRUE)
+gdal_abs2rel <- function(in_vrt, out_vrt = NA) {
+    
+    # to avoid NOTE on check
+    . <- NULL
+    
+    if (is.na(out_vrt)) {
+        out_vrt <- in_vrt
     }
-  }
-  writeLines(vrt_text, out_vrt)
-  
+    
+    if (!file.exists(in_vrt)) {
+        print_message(type = "error", "Input file (\"", in_vrt, "\") does not exists.")
+    }
+    
+    vrt_text <- readLines(in_vrt)
+    
+    # path_regex <- '^ *<SourceFilename relativeToVRT=\'0\'>(.*)</SourceFilename> *$'
+    path_regex <- "^.* relativeToVRT=\"0\">(.*)</.*"
+    
+    for (sel_line in grep(path_regex, vrt_text)) {
+        abs_path <- gsub(path_regex, "\\1", vrt_text[sel_line])
+        rel_path <- suppressWarnings(abs2rel(abs_path, dirname(in_vrt)))
+        if (abs_path != rel_path) {
+            vrt_text[sel_line] <- vrt_text[sel_line] %>% gsub(abs_path, rel_path, ., fixed = TRUE) %>% gsub("relativeToVRT=\"0\"", "relativeToVRT=\"1\"", ., fixed = TRUE)
+        }
+    }
+    writeLines(vrt_text, out_vrt)
+    
 }
 
 
@@ -61,35 +59,33 @@ gdal_abs2rel <- function(in_vrt, out_vrt=NA) {
 #'  links are followed). This is useful to grant that VRT can be moved
 #'  (if the files they link to are not moved).
 #' @export
-#' @importFrom magrittr "%>%"
+#' @importFrom magrittr '%>%'
 #' @name gdal_rel2abs
 #' @rdname gdal_abs2rel_rel2abs
-gdal_rel2abs <- function(in_vrt, out_vrt=NA) {
-  
-  # to avoid NOTE on check
-  . <- NULL
-  
-  if (is.na(out_vrt)) {
-    out_vrt <- in_vrt
-  }
-  
-  if (!file.exists(in_vrt)) {
-    print_message(type="error", "Input file (\"",in_vrt,"\") does not exists.")
-  }
-  
-  vrt_text <- readLines(in_vrt)
-  
-  # path_regex <- "^ *<SourceFilename relativeToVRT=\"1\">(.*)</SourceFilename> *$"
-  path_regex <- "^.* relativeToVRT=\"1\">(.*)</.*"
-  
-  for (sel_line in grep(path_regex, vrt_text)) {
-    rel_path <- gsub(path_regex, "\\1", vrt_text[sel_line])
-    abs_path <- expand_path(rel_path, dirname(in_vrt), normalize=TRUE)
-    vrt_text[sel_line] <- vrt_text[sel_line] %>%
-      gsub(rel_path, abs_path, ., fixed=TRUE) %>%
-      gsub("relativeToVRT=\"1\"", "relativeToVRT=\"0\"", ., fixed=TRUE)
-  }
-  
-  writeLines(vrt_text, out_vrt)
-  
+gdal_rel2abs <- function(in_vrt, out_vrt = NA) {
+    
+    # to avoid NOTE on check
+    . <- NULL
+    
+    if (is.na(out_vrt)) {
+        out_vrt <- in_vrt
+    }
+    
+    if (!file.exists(in_vrt)) {
+        print_message(type = "error", "Input file (\"", in_vrt, "\") does not exists.")
+    }
+    
+    vrt_text <- readLines(in_vrt)
+    
+    # path_regex <- '^ *<SourceFilename relativeToVRT=\'1\'>(.*)</SourceFilename> *$'
+    path_regex <- "^.* relativeToVRT=\"1\">(.*)</.*"
+    
+    for (sel_line in grep(path_regex, vrt_text)) {
+        rel_path <- gsub(path_regex, "\\1", vrt_text[sel_line])
+        abs_path <- expand_path(rel_path, dirname(in_vrt), normalize = TRUE)
+        vrt_text[sel_line] <- vrt_text[sel_line] %>% gsub(rel_path, abs_path, ., fixed = TRUE) %>% gsub("relativeToVRT=\"1\"", "relativeToVRT=\"0\"", ., fixed = TRUE)
+    }
+    
+    writeLines(vrt_text, out_vrt)
+    
 }

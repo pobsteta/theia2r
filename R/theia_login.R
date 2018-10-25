@@ -20,24 +20,21 @@
 #' @rdname theia_login
 #' @export
 
-read_theia_login <- function(apitheia_path=NA) {
-  # if apitheia_path is not specified, 
-  # retrieve from the current theia_download installation
-  if (is.na(apitheia_path)) {
-    # import theia_download
-    theia_download <- import_theia_download(convert=FALSE)
-    apitheia_path <- file.path(theia_download$inst_path,"auth_theia.txt")
-    # apitheia_path <- file.path(py_to_r(theia_download$inst_path),"auth_theia.txt")
-  }
-  # return user and password
-  if (file.exists(apitheia_path)) {
-    readLines(apitheia_path)[1] %>%
-      strsplit(" ") %>%
-      unlist()
-  } else {
-    # if apitheia does not exists, return default credentials
-    c("email","password")
-  }
+read_theia_login <- function(apitheia_path = NA) {
+    # if apitheia_path is not specified, retrieve from the current theia_download installation
+    if (is.na(apitheia_path)) {
+        # import theia_download
+        theia_download <- import_theia_download(convert = FALSE)
+        apitheia_path <- file.path(theia_download$inst_path, "auth_theia.txt")
+        # apitheia_path <- file.path(py_to_r(theia_download$inst_path),'auth_theia.txt')
+    }
+    # return user and password
+    if (file.exists(apitheia_path)) {
+        readLines(apitheia_path)[1] %>% strsplit(" ") %>% unlist()
+    } else {
+        # if apitheia does not exists, return default credentials
+        c("email", "password")
+    }
 }
 
 
@@ -50,19 +47,15 @@ read_theia_login <- function(apitheia_path=NA) {
 #' @rdname theia_login
 #' @export
 
-write_theia_login <- function(username, password, apitheia_path=NA) {
-  # if apitheia_path is not specified, 
-  # retrieve from the current theia_download installation
-  if (is.na(apitheia_path)) {
-    # import theia_download
-    theia_download <- import_theia_download(convert=FALSE)
-    apitheia_path <- file.path(theia_download$inst_path,"auth_theia.txt")
-  }
-  # write credentials
-  writeLines(
-    paste(username, password),
-    apitheia_path
-  )
+write_theia_login <- function(username, password, apitheia_path = NA) {
+    # if apitheia_path is not specified, retrieve from the current theia_download installation
+    if (is.na(apitheia_path)) {
+        # import theia_download
+        theia_download <- import_theia_download(convert = FALSE)
+        apitheia_path <- file.path(theia_download$inst_path, "auth_theia.txt")
+    }
+    # write credentials
+    writeLines(paste(username, password), apitheia_path)
 }
 
 #' @name theia_modal
@@ -78,53 +71,20 @@ write_theia_login <- function(username, password, apitheia_path=NA) {
 #' @export
 #'
 #' @examples
-theia_modal <- function(username=NA, password=NA) {
-  # read theia user/password
-  if (anyNA(c(username,password))) {
-    apitheia <- read_theia_login()
-    username <- apitheia[1]
-    password <- apitheia[2]
-  }
-  modalDialog(
-    title = "Set Theia username and password",
-    size = "s",
-    textInput("theia_username", "Username", username),
-    passwordInput("theia_password", "Password", password),
-    a("Register new account", href="https://sso.theia-land.fr/theia/register/register.xhtml", target="_blank"),
-    "\u2000\u2014\u2000",
-    a("Forgot password?", href="https://sso.theia-land.fr/theia/profile/recovery.xhtml;jsessionid=49E3F76B9E96191C4ADDD3EE5298E366", target="_blank"),
-    checkboxInput(
-      "apitheia_default",
-      label = span(
-        "Store inside the package\u2000",
-        actionLink("help_apitheia", icon("question-circle"))
-      ),
-      value = TRUE
-    ),
-    easyClose = FALSE,
-    footer = tagList(
-      div(style="display:inline-block;vertical-align:top;",
-          conditionalPanel(
-            condition = "output.switch_save_apihub == 'custom'",
-            shinySaveButton(
-              "apitheia_path_sel", 
-              "Save as...", "Specify path for apitheia text file", 
-              filetype=list(plain="txt"), 
-              class = "theia_savebutton"
-            )
-          )),
-      div(style="display:inline-block;vertical-align:top;",
-          conditionalPanel(
-            condition = "output.switch_save_apitheia == 'default'",
-            actionButton(
-              "save_apitheia", "\u2000Save", 
-              icon=icon("save"), 
-              class = "theia_savebutton"
-            )
-          )),
-      div(style="display:inline-block;vertical-align:top;",
-          modalButton("\u2000Cancel", icon = icon("ban")))
-    )
-  )
+theia_modal <- function(username = NA, password = NA) {
+    # read theia user/password
+    if (anyNA(c(username, password))) {
+        apitheia <- read_theia_login()
+        username <- apitheia[1]
+        password <- apitheia[2]
+    }
+    modalDialog(title = "Set Theia username and password", size = "s", textInput("theia_username", "Username", username), passwordInput("theia_password", "Password", 
+        password), a("Register new account", href = "https://sso.theia-land.fr/theia/register/register.xhtml", target = "_blank"), " — ", a("Forgot password?", 
+        href = "https://sso.theia-land.fr/theia/profile/recovery.xhtml;jsessionid=49E3F76B9E96191C4ADDD3EE5298E366", target = "_blank"), checkboxInput("apitheia_default", 
+        label = span("Store inside the package ", actionLink("help_apitheia", icon("question-circle"))), value = TRUE), easyClose = FALSE, footer = tagList(div(style = "display:inline-block;vertical-align:top;", 
+        conditionalPanel(condition = "output.switch_save_apihub == 'custom'", shinySaveButton("apitheia_path_sel", "Save as...", "Specify path for apitheia text file", 
+            filetype = list(plain = "txt"), class = "theia_savebutton"))), div(style = "display:inline-block;vertical-align:top;", conditionalPanel(condition = "output.switch_save_apitheia == 'default'", 
+        actionButton("save_apitheia", " Save", icon = icon("save"), class = "theia_savebutton"))), div(style = "display:inline-block;vertical-align:top;", modalButton(" Cancel", 
+        icon = icon("ban")))))
 }
 
